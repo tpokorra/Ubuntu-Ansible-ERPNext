@@ -36,3 +36,14 @@ Run on my workstation:
 
     ansible-playbook -i inventory.yml playbook-init.yml
     ansible-playbook -i inventory.yml playbook-install.yml
+
+
+run on the host as user xyz-erpnext:
+
+    cd frappe
+    export site=erpnext.example.org
+    bench --site $site enable-scheduler
+    bench --site $site add-to-hosts
+    bench --site $site set-maintenance-mode off
+    bench --site $site scheduler resume
+    sudo bench setup production xyz00-erpnext

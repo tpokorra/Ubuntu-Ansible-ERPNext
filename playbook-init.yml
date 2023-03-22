@@ -126,3 +126,9 @@
       state: restarted
       daemon_reload: true
       name: mariadb
+
+  #######################
+  # install frappe bench
+  #######################
+  - name: install frappe bench
+    shell: pip3 install frappe-bench
