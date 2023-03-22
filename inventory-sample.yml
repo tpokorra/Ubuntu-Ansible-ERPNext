@@ -1,0 +1,25 @@
+erpnext:
+  vars:
+    ansible_user: root
+  hosts:
+    erpnext.example.org:
+      pac: "xyz00"
+      user: "erpnext"
+      userhome: "/home/pacs/{{pac}}/users/{{user}}"
+      password: CHANGEME
+
+      domain: "erpnext.example.org"
+
+      db_name: "erpnext"
+      db_username: "erpnext"
+      db_password: "topsecret"
+      mysql_root_password: "supersecret"
+
+      adminname: administrator
+      adminpwd: CHANGEME
+
+      # see https://github.com/frappe/frappe/tags
+      frappe_branch: "v14.29.0"
+
+      # see https://github.com/frappe/erpnext/tags
+      erpnext_version: "v14.19.0"

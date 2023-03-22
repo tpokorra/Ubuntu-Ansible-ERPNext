@@ -1,0 +1,128 @@
+---
+- hosts: erpnext
+  become: true
+
+  tasks:
+
+  #################################
+  # install some default packages
+  #################################
+  - name: get some basic apt packages
+    apt:
+      name: ['git', 'cron', 'wget', 'curl', 'vim']
+      update_cache: yes
+      state: latest
+
+  ##################################
+  # User that hosts the application
+  ##################################
+  - name: create group erpnext
+    ansible.builtin.group:
+      name: erpnext
+      state: present
+  - name: create unix user
+    ansible.builtin.user:
+      name: "{{pac}}-{{user}}"
+      password: "{{ password | password_hash('sha512') }}"
+      shell: /bin/bash
+      home: "{{userhome}}"
+      groups: ['sudo', 'erpnext']
+      append: yes
+
+  #################################
+  # install more packages
+  #################################
+  - name: get required packages
+    apt:
+      name: ['libffi-dev', 'python3-pip', 'python3-distutils', 'python3-dev', 'python3-venv', 'libssl-dev', 'wkhtmltopdf', 'supervisor']
+      update_cache: yes
+      state: latest
+  - name: get more packages
+    apt:
+      name: ['redis-server', 'nginx', 'mariadb-server', 'mariadb-client']
+      update_cache: yes
+      state: latest
+
+  ########################
+  # install Node.js >= 14
+  ########################
+  - name: add repo for Node.js
+    shell: |
+      curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - || exit -1
+    args:
+      executable: /bin/bash
+      creates: /etc/apt/sources.list.d/nodesource.list
+      warn: false
+
+  - name: install node
+    apt:
+      name: ['nodejs']
+      update_cache: yes
+      state: latest
+
+  - name: install yarn
+    shell: |
+      npm install -g yarn || exit -1
+    args:
+      executable: /bin/bash
+      creates: /usr/bin/yarn
+
+  ####################################
+  # setup the database
+  ####################################
+  - name: Install MariaDB Server
+    apt:
+      name: ['mariadb-server', 'python3-pymysql']
+      update_cache: yes
+      state: latest
+
+  - name: Sets the database root password
+    mysql_user:
+      name: root
+      password: "{{mysql_root_password}}"
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+    ignore_errors: true
+
+  - name: Removes the test database
+    mysql_db:
+      name: test
+      state: absent
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      login_user: root
+      login_password: "{{mysql_root_password}}"
+
+  - name: create database
+    mysql_db:
+      name: "{{db_name}}"
+      state: present
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      login_user: root
+      login_password: "{{mysql_root_password}}"
+
+  - name: create database user
+    mysql_user:
+      name: "{{db_username}}"
+      password: "{{db_password}}"
+      priv: "{{db_name}}.*:ALL"
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      login_user: root
+      login_password: "{{mysql_root_password}}"
+
+  - name: configure mariadb
+    blockinfile:
+      dest: /etc/mysql/my.cnf
+      marker: "# {mark} ANSIBLE MANAGED BLOCK erpnext"
+      block: |
+        [mysqld]
+        character-set-client-handshake = FALSE
+        character-set-server = utf8mb4
+        collation-server = utf8mb4_unicode_ci
+        
+        [mysql]
+        default-character-set = utf8mb4
+
+  - name: restart mariadb
+    ansible.builtin.systemd:
+      state: restarted
+      daemon_reload: true
+      name: mariadb

@@ -1,0 +1,93 @@
+---
+- hosts: erpnext
+  become_user: "{{pac}}-{{user}}"
+
+  tasks:
+  #################################
+  ## install frappe bench
+  #################################
+  - name: install frappe bench
+    become: yes
+    shell: |
+      pip3 install frappe-bench || exit -1
+    args:
+      executable: /bin/bash
+      creates: "{{userhome}}/.local/bin/bench"
+
+  - name: install init frappe
+    become: yes
+    shell: |
+      source ~/.profile
+      sed -i 's/\tcmd = conf.get("supervisor_restart_cmd")$/\tcmd = conf.get("supervisor_restart_cmd") or os.getenv("SUPERVISOR_RESTART_CMD")/g' ~/.local/lib/python3.10/site-packages/bench/utils/bench.py 
+      export SUPERVISOR_RESTART_CMD='echo'
+      bench init frappe --frappe-branch {{frappe_branch}} || exit -1
+    args:
+      executable: /bin/bash
+      creates: "{{userhome}}/frappe"
+      chdir: "{{userhome}}"
+
+  - name: initialise the site
+    become: yes
+    shell: |
+      source ~/.profile
+      bench start &
+      bench new-site {{domain}} --admin-password "{{adminpwd}}" --db-root-password "{{mysql_root_password}}" || exit -1
+      bench use {{domain}}
+      bench migrate
+    args:
+      executable: /bin/bash
+      creates: "{{userhome}}/frappe/sites/{{domain}}"
+      chdir: "{{userhome}}/frappe"
+  
+  - name: get app erpnext
+    become: yes
+    shell: |
+      source ~/.profile
+      bench start &
+      bench get-app erpnext --branch {{erpnext_version}} || exit -1
+    args:
+      executable: /bin/bash
+      chdir: "{{userhome}}/frappe"
+      creates: "{{userhome}}/frappe/apps/erpnext"
+
+  - name: get app hrms
+    become: yes
+    shell: |
+      source ~/.profile
+      bench start &
+      bench get-app hrms || exit -1
+    args:
+      executable: /bin/bash
+      chdir: "{{userhome}}/frappe"
+      creates: "{{userhome}}/frappe/apps/hrms"
+
+  - name: install app erpnext
+    become: yes
+    shell: |
+      source ~/.profile
+      bench start &
+      bench --site {{domain}} install-app erpnext || exit -1
+    args:
+      executable: /bin/bash
+      chdir: "{{userhome}}/frappe"
+
+  - name: install app hrms
+    become: yes
+    shell: |
+      source ~/.profile
+      bench start &
+      bench --site {{domain}} install-app hrms || exit -1
+    args:
+      executable: /bin/bash
+      chdir: "{{userhome}}/frappe"
+
+  - name: final migration after installing apps
+    become: yes
+    shell: |
+      source ~/.profile
+      bench start &
+      bench use {{domain}}
+      bench migrate
+    args:
+      executable: /bin/bash
+      chdir: "{{userhome}}/frappe"
