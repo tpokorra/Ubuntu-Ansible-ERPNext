@@ -18,7 +18,7 @@
     become: yes
     shell: |
       source ~/.profile
-      sed -i 's/\tcmd = conf.get("supervisor_restart_cmd")$/\tcmd = conf.get("supervisor_restart_cmd") or os.getenv("SUPERVISOR_RESTART_CMD")/g' ~/.local/lib/python3.10/site-packages/bench/utils/bench.py 
+      sed -i 's/\tcmd = conf.get("supervisor_restart_cmd")$/\tcmd = conf.get("supervisor_restart_cmd") or os.getenv("SUPERVISOR_RESTART_CMD")/g' ~/.local/lib/python3.10/site-packages/bench/utils/bench.py
       export SUPERVISOR_RESTART_CMD='echo'
       bench init frappe --frappe-branch {{frappe_branch}} || exit -1
     args:
@@ -44,6 +44,7 @@
     shell: |
       source ~/.profile
       bench start &
+      export SUPERVISOR_RESTART_CMD='echo'
       bench get-app erpnext --branch {{erpnext_version}} || exit -1
     args:
       executable: /bin/bash
@@ -55,6 +56,7 @@
     shell: |
       source ~/.profile
       bench start &
+      export SUPERVISOR_RESTART_CMD='echo'
       bench get-app hrms || exit -1
     args:
       executable: /bin/bash
@@ -66,6 +68,7 @@
     shell: |
       source ~/.profile
       bench start &
+      export SUPERVISOR_RESTART_CMD='echo'
       bench --site {{domain}} install-app erpnext || exit -1
     args:
       executable: /bin/bash
@@ -76,6 +79,7 @@
     shell: |
       source ~/.profile
       bench start &
+      export SUPERVISOR_RESTART_CMD='echo'
       bench --site {{domain}} install-app hrms || exit -1
     args:
       executable: /bin/bash
@@ -87,6 +91,7 @@
       source ~/.profile
       bench start &
       bench use {{domain}}
+      export SUPERVISOR_RESTART_CMD='echo'
       bench migrate
     args:
       executable: /bin/bash
